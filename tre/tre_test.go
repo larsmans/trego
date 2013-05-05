@@ -13,6 +13,12 @@ var validREs = []string{
 	"(foo){~2} bar$",
 }
 
+var invalidREs = []string{
+	"(foo!",
+	"{bla",
+	"irregular expression{)",
+}
+
 func Test_Compile(t *testing.T) {
 	for _, s := range validREs {
 		re, err := Compile(s, 0)
@@ -29,6 +35,21 @@ func Test_Compile(t *testing.T) {
 			msg := fmt.Sprintf("wrong String() for %s: %s",
 				re.String(), s)
 			t.Error(msg)
+		}
+	}
+
+	for _, s := range invalidREs {
+		re, err := Compile(s, 0)
+		switch {
+		case err == nil:
+			msg := fmt.Sprintf("Compile(%s) should have failed", s)
+			t.Error(msg)
+		case re != nil:
+			msg := fmt.Sprintf("error %s but non-nil re for %s",
+				err, s)
+			t.Error(msg)
+		default:
+			t.Log(fmt.Sprintf("correct failure %s for %s", err, s))
 		}
 	}
 }
