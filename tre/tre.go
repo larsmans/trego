@@ -32,6 +32,7 @@ package tre
 import "C"
 
 import (
+	"errors"
 	"runtime"
 	"unsafe"
 )
@@ -60,8 +61,8 @@ func Compile(expr string, flags Flags) (*Regexp, error) {
 	defer C.free(unsafe.Pointer(cstr))
 
 	cflags := C.int(flags) | C.REG_EXTENDED
-	if ec := C.tre_regcomp(&re.preg, cstr, cflags); ec != 0 {
-		return nil, treError(ec)
+	if e := C.tre_regcomp(&re.preg, cstr, cflags); e != 0 {
+		return nil, re.regerror(e)
 	}
 	runtime.SetFinalizer(&re, cleanup)
 
@@ -73,36 +74,14 @@ func cleanup(re *Regexp) {
 	C.tre_regfree(&re.preg)
 }
 
-type treError int
+func (re *Regexp) regerror(code C.int) error {
+	length := C.tre_regerror(code, &re.preg, nil, 0)
 
-func (e treError) Error() (msg string) {
-	switch e {
-	case C.REG_BADPAT:
-		msg = "invalid multibyte sequence"
-	case C.REG_ECOLLATE:
-		msg = "invalid collating element referenced"
-	case C.REG_ECTYPE:
-		msg = "unknown character class name"
-	case C.REG_EESCAPE:
-		msg = "last character of regexp was \\"
-	case C.REG_ESUBREG:
-		msg = "invalid backreference"
-	case C.REG_EBRACK:
-		msg = "unbalanced [ or ]"
-	case C.REG_EPAREN:
-		msg = "unbalanced (, \\(, ) or \\)"
-	case C.REG_EBRACE:
-		msg = "unbalanced {, \\{, } or \\}"
-	case C.REG_BADBR:
-		msg = "{} content invalid"
-	case C.REG_ERANGE:
-		msg = "invalid character range"
-	case C.REG_ESPACE:
-		msg = "out of memory"
-	case C.REG_BADRPT:
-		msg = "invalid use of repetition operator"
-	}
-	return
+	buf := make([]byte, length)
+	pbuf := (*C.char)(unsafe.Pointer(&buf[0]))
+	C.tre_regerror(code, &re.preg, pbuf, length)
+
+	return errors.New(string(buf))
 }
 
 // Like regexp.Find in the standard library.
@@ -129,7 +108,7 @@ func (re *Regexp) FindIndex(b []byte) []int {
 	case C.REG_NOMATCH:
 		return nil
 	default:
-		panic(treError(e))
+		panic(re.regerror(e))
 	}
 
 	return []int{int(pmatch.rm_so), int(pmatch.rm_eo)}
