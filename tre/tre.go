@@ -38,6 +38,7 @@ import (
 
 type Regexp struct {
 	preg C.regex_t
+	str string
 }
 
 type Flags int
@@ -62,9 +63,9 @@ func Compile(expr string, flags Flags) (*Regexp, error) {
 	if ec := C.tre_regcomp(&re.preg, cstr, cflags); ec != 0 {
 		return nil, treError(ec)
 	}
-
 	runtime.SetFinalizer(&re, cleanup)
 
+	re.str = expr
 	return &re, nil
 }
 
@@ -137,4 +138,8 @@ func (re *Regexp) FindIndex(b []byte) []int {
 // Whether re uses backreferences.
 func (re *Regexp) HasBackrefs() bool {
 	return C.tre_have_backrefs(&re.preg) != 0
+}
+
+func (re *Regexp) String() string {
+	return re.str
 }
