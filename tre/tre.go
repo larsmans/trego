@@ -114,6 +114,11 @@ func (re *Regexp) FindIndex(b []byte) []int {
 	return []int{int(pmatch.rm_so), int(pmatch.rm_eo)}
 }
 
+func (re *Regexp) FindString(s string) string {
+	// Naive, preliminary implementation
+	return string(re.Find([]byte(s)))
+}
+
 // Whether re uses backreferences.
 func (re *Regexp) HasBackrefs() bool {
 	return C.tre_have_backrefs(&re.preg) != 0

@@ -54,22 +54,39 @@ func Test_Compile(t *testing.T) {
 	}
 }
 
+// Test Find and FindString.
 func Test_Find(t *testing.T) {
 	pattern := "(regular){~1}\\s+(expression){~2}"
+	text := "match this with your regulor  exzpressyon!"
+
 	re, err := Compile(pattern, 0)
 	if err != nil {
 		msg := fmt.Sprintf("failed to compile %s: %s", pattern, err)
 		t.Error(msg)
 	}
 
-	text := []byte("match this with your regulor  exzpressyon!")
-	match := re.Find(text)
+	match := re.Find([]byte(text))
 	switch {
 	case match == nil:
-		msg := fmt.Sprintf("failed to find %s in \"%s\"", re, text)
+		msg := fmt.Sprintf("failed to Find %s in \"%s\"", re, text)
 		t.Error(msg)
 	case bytes.Compare(match, []byte("regulor  exzpressyon")) != 0:
 		msg := fmt.Sprintf("%s found wrong substring \"%s\"", re, match)
+		t.Error(msg)
+	default:
+		t.Log(fmt.Sprintf("successfully matched \"%s\" with %s",
+			re, text))
+	}
+
+	smatch := re.FindString(text)
+	switch {
+	case smatch == "":
+		msg := fmt.Sprintf("failed to FindString %s in \"%s\"",
+			re, text)
+		t.Error(msg)
+	case smatch != "regulor  exzpressyon":
+		msg := fmt.Sprintf("%s found wrong substring \"%s\"",
+			re, smatch)
 		t.Error(msg)
 	default:
 		t.Log(fmt.Sprintf("successfully matched \"%s\" with %s",
